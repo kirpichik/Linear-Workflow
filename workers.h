@@ -23,12 +23,13 @@ namespace workers {
  *
  * None -> Text
  */
-class ReadFile : public Worker {
+class ReadFile : public wkfw::Worker {
  public:
-  ReadFile(const std::string& filename) : filename(filename) {}
+  ReadFile(const size_t ident, const std::string& filename)
+      : wkfw::Worker(ident), filename(filename) {}
 
-  const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
+      throw(wkfw::WorkerExecuteException) override;
 
  private:
   const std::string filename;
@@ -39,12 +40,13 @@ class ReadFile : public Worker {
  *
  * Text -> None
  */
-class WriteFile : public Worker {
+class WriteFile : public wkfw::Worker {
  public:
-  WriteFile(const std::string& filename) : filename(filename) {}
+  WriteFile(const size_t ident, const std::string& filename)
+      : wkfw::Worker(ident), filename(filename) {}
 
-  virtual const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  virtual const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous)
+      const throw(wkfw::WorkerExecuteException) override;
 
  private:
   const std::string filename;
@@ -56,12 +58,13 @@ class WriteFile : public Worker {
  *
  * Text -> Text
  */
-class Grep : public Worker {
+class Grep : public wkfw::Worker {
  public:
-  Grep(const std::string& pattern) : pattern(pattern) {}
+  Grep(const size_t ident, const std::string& pattern)
+      : Worker(ident), pattern(pattern) {}
 
-  const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
+      throw(wkfw::WorkerExecuteException) override;
 
  private:
   const std::string pattern;
@@ -72,10 +75,12 @@ class Grep : public Worker {
  *
  * Text -> Text
  */
-class Sort : public Worker {
+class Sort : public wkfw::Worker {
  public:
-  const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  Sort(const size_t ident) : wkfw::Worker(ident) {}
+
+  const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
+      throw(wkfw::WorkerExecuteException) override;
 };
 
 /**
@@ -83,13 +88,14 @@ class Sort : public Worker {
  *
  * Text -> Text
  */
-class Replace : public Worker {
+class Replace : public wkfw::Worker {
  public:
-  Replace(const std::string& pattern, const std::string& substitution)
-      : pattern(pattern), substitution(substitution) {}
+  Replace(const size_t ident, const std::string& pattern,
+          const std::string& substitution)
+      : wkfw::Worker(ident), pattern(pattern), substitution(substitution) {}
 
-  const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
+      throw(wkfw::WorkerExecuteException) override;
 
  private:
   const std::string pattern;
@@ -103,10 +109,11 @@ class Replace : public Worker {
  */
 class Dump : public WriteFile {
  public:
-  Dump(const std::string& filename) : WriteFile(filename) {}
+  Dump(const size_t ident, const std::string& filename)
+      : WriteFile(ident, filename) {}
 
-  const WorkerResult execute(const WorkerResult& previous) const
-      throw(WorkerExecuteException) override;
+  const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
+      throw(wkfw::WorkerExecuteException) override;
 
  private:
   const std::string filename;

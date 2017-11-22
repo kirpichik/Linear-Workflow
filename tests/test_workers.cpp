@@ -14,6 +14,8 @@
 
 #include "workers.h"
 
+using namespace wkfw;
+
 const std::string TEMP_TEST_FILE = "._temp_test_";
 
 /**
@@ -81,7 +83,7 @@ public:
 };
 
 TEST_F(IOWorkerTest, ReadFileRight) {
-  workers::ReadFile read(TEMP_TEST_FILE);
+  workers::ReadFile read(0, TEMP_TEST_FILE);
   
   createFile(TEMP_TEST_FILE, "abc\ndef\nghi");
   
@@ -95,7 +97,7 @@ TEST_F(IOWorkerTest, ReadFileRight) {
 }
 
 TEST_F(IOWorkerTest, WriteFileRight) {
-  workers::WriteFile write(TEMP_TEST_FILE);
+  workers::WriteFile write(0, TEMP_TEST_FILE);
   
   ASSERT_EQ(write.execute(WorkerResult({ "abc", "def", "ghi" })), WorkerResult());
   
@@ -103,7 +105,7 @@ TEST_F(IOWorkerTest, WriteFileRight) {
 }
 
 TEST(Workers, GrepRight) {
-  workers::Grep grep("abc");
+  workers::Grep grep(0, "abc");
   
   ASSERT_EQ(grep.execute(WorkerResult({ "abc def ghi", "jkl abc mno", "pqr stu abc" })),
             WorkerResult({ "abc def ghi", "jkl abc mno", "pqr stu abc" }));
@@ -116,7 +118,7 @@ TEST(Workers, GrepRight) {
 }
 
 TEST(Workers, SortRight) {
-  workers::Sort sort;
+  workers::Sort sort(0);
   
   ASSERT_EQ(sort.execute(WorkerResult(std::vector<std::string>())),
             WorkerResult(std::vector<std::string>()));
@@ -129,7 +131,7 @@ TEST(Workers, SortRight) {
 }
 
 TEST(Workers, ReplaceRight) {
-  workers::Replace replace("abc", "def");
+  workers::Replace replace(0, "abc", "def");
   
   ASSERT_EQ(replace.execute(WorkerResult({ "" })),
             WorkerResult({ "" }));
@@ -157,14 +159,14 @@ TEST(Workers, ReplaceRight) {
 }
 
 TEST_F(IOWorkerTest, DumpRight) {
-  workers::Dump dump(TEMP_TEST_FILE);
+  workers::Dump dump(0, TEMP_TEST_FILE);
   
   ASSERT_EQ(dump.execute(WorkerResult({ "test text" })),
             WorkerResult({ "test text" }));
 }
 
 TEST_F(IOWorkerTest, ReadFileWrong) {
-  workers::ReadFile read(TEMP_TEST_FILE);
+  workers::ReadFile read(0, TEMP_TEST_FILE);
   
   ASSERT_THROW(read.execute(WorkerResult()), WorkerExecuteException);
 }

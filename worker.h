@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+namespace wkfw {
+
 /**
  * Бросается при попытке получить результат при его отсутствии.
  */
@@ -94,6 +96,8 @@ class WorkerResult {
  */
 class Worker {
  public:
+  Worker(const size_t identifier) : identifier(identifier) {}
+
   /**
    * Выполняет обработчик блока.
    *
@@ -102,6 +106,18 @@ class Worker {
    */
   virtual const WorkerResult execute(const WorkerResult& previous) const
       throw(WorkerExecuteException) = 0;
+
+  /**
+   * @return Уникальный номер инструкции в общем наборе инструкций
+   * */
+  size_t getId() { return identifier; }
+  
+  virtual ~Worker() {}
+
+ private:
+  const size_t identifier;
 };
+
+}  // namespace wkfw
 
 #endif /* WORKER_H_ */

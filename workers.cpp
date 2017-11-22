@@ -10,14 +10,12 @@
 #include <fstream>
 #include <vector>
 
-#include <iostream>
-
 #include "workers.h"
 
 namespace workers {
 
-const WorkerResult ReadFile::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult ReadFile::execute(const wkfw::WorkerResult& previous)
+    const throw(wkfw::WorkerExecuteException) {
   std::ifstream input;
   std::vector<std::string> list;
 
@@ -26,53 +24,52 @@ const WorkerResult ReadFile::execute(const WorkerResult& previous) const
   try {
     input.open(filename);
     std::string line;
-    while (!input.eof() && std::getline(input, line))
-      list.push_back(line);
+    while (!input.eof() && std::getline(input, line)) list.push_back(line);
     input.close();
   } catch (std::ifstream::failure& e) {
     if (!input.eof())
-      throw WorkerExecuteException("Cannot read lines from file \"" + filename +
-                                 "\"");
+      throw wkfw::WorkerExecuteException("Cannot read lines from file \"" +
+                                         filename + "\"");
   }
 
-  return WorkerResult(list);
+  return wkfw::WorkerResult(list);
 }
 
-const WorkerResult WriteFile::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult WriteFile::execute(const wkfw::WorkerResult& previous)
+    const throw(wkfw::WorkerExecuteException) {
   std::ofstream output;
 
   output.exceptions(std::ofstream::failbit | std::ofstream::badbit);
 
   try {
     output.open(filename);
-    for (auto line : previous.getValue()) output << line << std::endl;
+    for (auto const& line : previous.getValue()) output << line << std::endl;
     output.close();
   } catch (std::ofstream::failure& e) {
-    throw WorkerExecuteException("Cannot write lines to file \"" + filename +
-                                 "\"");
+    throw wkfw::WorkerExecuteException("Cannot write lines to file \"" +
+                                       filename + "\"");
   }
 
-  return WorkerResult();
+  return wkfw::WorkerResult();
 }
 
-const WorkerResult Grep::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult Grep::execute(const wkfw::WorkerResult& previous) const
+    throw(wkfw::WorkerExecuteException) {
   std::vector<std::string> list;
 
-  for (auto line : previous.getValue())
+  for (auto const& line : previous.getValue())
     if (line.find(pattern) != -1) list.push_back(line);
 
-  return WorkerResult(list);
+  return wkfw::WorkerResult(list);
 }
 
-const WorkerResult Sort::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult Sort::execute(const wkfw::WorkerResult& previous) const
+    throw(wkfw::WorkerExecuteException) {
   std::vector<std::string> list = previous.getValue();
 
   std::sort(list.begin(), list.end());
 
-  return WorkerResult(list);
+  return wkfw::WorkerResult(list);
 }
 
 /**
@@ -97,21 +94,21 @@ static std::string replace(const std::string& str, const std::string& pattern,
   return result;
 }
 
-const WorkerResult Replace::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult Replace::execute(const wkfw::WorkerResult& previous)
+    const throw(wkfw::WorkerExecuteException) {
   std::vector<std::string> list;
 
-  for (auto line : previous.getValue())
+  for (auto const& line : previous.getValue())
     list.push_back(replace(line, pattern, substitution));
 
-  return WorkerResult(list);
+  return wkfw::WorkerResult(list);
 }
 
-const WorkerResult Dump::execute(const WorkerResult& previous) const
-    throw(WorkerExecuteException) {
+const wkfw::WorkerResult Dump::execute(const wkfw::WorkerResult& previous) const
+    throw(wkfw::WorkerExecuteException) {
   WriteFile::execute(previous);
 
-  return WorkerResult(previous.getValue());
+  return wkfw::WorkerResult(previous.getValue());
 }
 
 }  // namespace workers
