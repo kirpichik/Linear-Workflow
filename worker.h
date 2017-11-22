@@ -14,11 +14,25 @@
 #include <vector>
 
 /**
- * Исключение, бросаемое при попытке получить результат при его отсутствии.
+ * Бросается при попытке получить результат при его отсутствии.
  */
 class NoResultException : public std::exception {
  public:
   const char* what() const throw() override { return "No result given!"; }
+};
+
+/**
+ * Бросается при ошибке времени исполнения обработчика блока.
+ * */
+class WorkerExecuteException : public std::exception {
+ public:
+  WorkerExecuteException(const std::string& description)
+      : description(description) {}
+
+  const char* what() const throw() override { return description.c_str(); }
+
+ private:
+  const std::string description;
 };
 
 /**
@@ -39,19 +53,20 @@ class WorkerResult {
    */
   WorkerResult(const std::vector<std::string>& value)
       : type(TEXT), value(value) {}
-  
-  WorkerResult(const WorkerResult& result) : type(result.type), value(result.value) {}
-  
+
+  WorkerResult(const WorkerResult& result)
+      : type(result.type), value(result.value) {}
+
   WorkerResult& operator=(const WorkerResult& from) {
     type = from.type;
     value = from.value;
     return (*this);
   }
-  
+
   bool operator==(const WorkerResult& other) const {
     return type == other.type && value == other.value;
   }
-  
+
   bool operator!=(const WorkerResult& other) const {
     return type != other.type || value != other.value;
   }
@@ -85,7 +100,8 @@ class Worker {
    * @param previous Результат выполнения предыдущего блока.
    * @return Результат выполнения данного блока.
    */
-  virtual const WorkerResult execute(const WorkerResult& previous) = 0;
+  virtual const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) = 0;
 };
 
 #endif /* WORKER_H_ */

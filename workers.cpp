@@ -10,11 +10,14 @@
 #include <fstream>
 #include <vector>
 
+#include <iostream>
+
 #include "workers.h"
 
 namespace workers {
 
-const WorkerResult ReadFile::execute(const WorkerResult& previous) {
+const WorkerResult ReadFile::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   std::ifstream input;
   std::vector<std::string> list;
 
@@ -23,17 +26,20 @@ const WorkerResult ReadFile::execute(const WorkerResult& previous) {
   try {
     input.open(filename);
     std::string line;
-    while (std::getline(input, line)) list.push_back(line);
+    while (!input.eof() && std::getline(input, line))
+      list.push_back(line);
     input.close();
   } catch (std::ifstream::failure& e) {
-    throw WorkerExecuteException("Cannot read lines from file \"" + filename +
+    if (!input.eof())
+      throw WorkerExecuteException("Cannot read lines from file \"" + filename +
                                  "\"");
   }
 
   return WorkerResult(list);
 }
 
-const WorkerResult WriteFile::execute(const WorkerResult& previous) {
+const WorkerResult WriteFile::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   std::ofstream output;
 
   output.exceptions(std::ofstream::failbit | std::ofstream::badbit);
@@ -50,7 +56,8 @@ const WorkerResult WriteFile::execute(const WorkerResult& previous) {
   return WorkerResult();
 }
 
-const WorkerResult Grep::execute(const WorkerResult& previous) {
+const WorkerResult Grep::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   std::vector<std::string> list;
 
   for (auto line : previous.getValue())
@@ -59,7 +66,8 @@ const WorkerResult Grep::execute(const WorkerResult& previous) {
   return WorkerResult(list);
 }
 
-const WorkerResult Sort::execute(const WorkerResult& previous) {
+const WorkerResult Sort::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   std::vector<std::string> list = previous.getValue();
 
   std::sort(list.begin(), list.end());
@@ -89,18 +97,20 @@ static std::string replace(const std::string& str, const std::string& pattern,
   return result;
 }
 
-const WorkerResult Replace::execute(const WorkerResult& previous) {
+const WorkerResult Replace::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   std::vector<std::string> list;
-  
+
   for (auto line : previous.getValue())
     list.push_back(replace(line, pattern, substitution));
-  
+
   return WorkerResult(list);
 }
 
-const WorkerResult Dump::execute(const WorkerResult& previous) {
+const WorkerResult Dump::execute(const WorkerResult& previous) const
+    throw(WorkerExecuteException) {
   WriteFile::execute(previous);
-  
+
   return WorkerResult(previous.getValue());
 }
 

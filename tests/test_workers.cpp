@@ -43,12 +43,22 @@ public:
   }
   
   /**
-   * @return true, если файл существует
+   * @return true, если файл существует и его содержимое соответствует искомому.
    * */
-  bool existsFile(const std::string& filename) {
+  bool validateFile(const std::string& filename, const std::vector<std::string> prototype) {
     std::ifstream file(filename);
-    return (bool) file;
+    std::vector<std::string> list;
+    
+    if (!file.is_open())
+      return false;
+    
+    std::string line;
+    while (std::getline(file, line)) list.push_back(line);
+    file.close();
+    
+    return prototype == list;
   }
+  
   
   /**
    * Удаляет файл и забывает о его существовании.
@@ -77,6 +87,11 @@ TEST_F(IOWorkerTest, ReadFileRight) {
   
   ASSERT_EQ(read.execute(WorkerResult()),
             WorkerResult({ "abc", "def", "ghi" }));
+  
+  createFile(TEMP_TEST_FILE, "abc\ndef\nghi\n");
+  
+  ASSERT_EQ(read.execute(WorkerResult()),
+            WorkerResult({ "abc", "def", "ghi" }));
 }
 
 TEST_F(IOWorkerTest, WriteFileRight) {
@@ -84,7 +99,7 @@ TEST_F(IOWorkerTest, WriteFileRight) {
   
   ASSERT_EQ(write.execute(WorkerResult({ "abc", "def", "ghi" })), WorkerResult());
   
-  // TODO - проверка соответствия содержимого файла
+  ASSERT_TRUE(validateFile(TEMP_TEST_FILE, { "abc", "def", "ghi" }));
 }
 
 TEST(Workers, GrepRight) {
@@ -149,13 +164,7 @@ TEST_F(IOWorkerTest, DumpRight) {
 }
 
 TEST_F(IOWorkerTest, ReadFileWrong) {
-  // TODO
-}
-
-TEST_F(IOWorkerTest, WriteFileWrong) {
-  // TODO
-}
-
-TEST_F(IOWorkerTest, DumpWrong) {
-  // TODO
+  workers::ReadFile read(TEMP_TEST_FILE);
+  
+  ASSERT_THROW(read.execute(WorkerResult()), WorkerExecuteException);
 }

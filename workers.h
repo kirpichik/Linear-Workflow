@@ -9,7 +9,6 @@
 #ifndef WORKERS_H_
 #define WORKERS_H_
 
-#include <exception>
 #include <string>
 
 #include "worker.h"
@@ -18,17 +17,6 @@
  * Набор реализаций обработчиков блоков.
  */
 namespace workers {
-
-class WorkerExecuteException : public std::exception {
- public:
-  
-  WorkerExecuteException(const std::string& description) : description(description) {}
-  
-  const char* what() const throw() override { return description.c_str(); }
-  
- private:
-  const std::string description;
-};
 
 /**
  * Считывание текстового файла в память, целиком.
@@ -39,7 +27,8 @@ class ReadFile : public Worker {
  public:
   ReadFile(const std::string& filename) : filename(filename) {}
 
-  const WorkerResult execute(const WorkerResult& previous) override;
+  const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 
  private:
   const std::string filename;
@@ -54,7 +43,8 @@ class WriteFile : public Worker {
  public:
   WriteFile(const std::string& filename) : filename(filename) {}
 
-  virtual const WorkerResult execute(const WorkerResult& previous) override;
+  virtual const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 
  private:
   const std::string filename;
@@ -70,7 +60,8 @@ class Grep : public Worker {
  public:
   Grep(const std::string& pattern) : pattern(pattern) {}
 
-  const WorkerResult execute(const WorkerResult& previous) override;
+  const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 
  private:
   const std::string pattern;
@@ -83,7 +74,8 @@ class Grep : public Worker {
  */
 class Sort : public Worker {
  public:
-  const WorkerResult execute(const WorkerResult& previous) override;
+  const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 };
 
 /**
@@ -96,7 +88,8 @@ class Replace : public Worker {
   Replace(const std::string& pattern, const std::string& substitution)
       : pattern(pattern), substitution(substitution) {}
 
-  const WorkerResult execute(const WorkerResult& previous) override;
+  const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 
  private:
   const std::string pattern;
@@ -112,7 +105,8 @@ class Dump : public WriteFile {
  public:
   Dump(const std::string& filename) : WriteFile(filename) {}
 
-  const WorkerResult execute(const WorkerResult& previous) override;
+  const WorkerResult execute(const WorkerResult& previous) const
+      throw(WorkerExecuteException) override;
 
  private:
   const std::string filename;
