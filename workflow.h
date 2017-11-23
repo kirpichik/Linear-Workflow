@@ -60,12 +60,17 @@ class DescriptionParser {
    * @return Обработчик по его номеру или nullptr,
    * если обработчика с данным номером не существует.
    */
-  const wkfw::Worker* getWorkerById(const size_t ident) const;
+  const Worker* getWorkerById(const size_t ident) const;
 
   ~DescriptionParser();
 
  private:
-  const std::map<size_t, wkfw::Worker*> description;
+  std::map<size_t, Worker*> description;
+  
+  /**
+   * Разбирает строку из блока описания
+   */
+  void parseDescriptionLine(const std::string line, const size_t lineNumber) throw(InvalidDescriptionException);
 };
 
 /**
@@ -93,7 +98,7 @@ class InstructionParser {
   /**
    * @return Следующая инструкция для исполнения Workflow.
    */
-  virtual const wkfw::Worker* nextInstruction() throw(
+  virtual const Worker* nextInstruction() throw(
       InvalidInstructionException) = 0;
 
  protected:
@@ -110,7 +115,7 @@ class LazyInstructionParser : public InstructionParser {
                         std::istream& stream) throw(InvalidInstructionException)
       : InstructionParser(desc), stream(stream) {}
 
-  const wkfw::Worker* nextInstruction() throw(
+  const Worker* nextInstruction() throw(
       InvalidInstructionException) override;
 
  private:
@@ -134,7 +139,7 @@ class ValidateInstructionParser : public InstructionParser {
       const DescriptionParser& desc,
       std::istream& stream) throw(InvalidInstructionException);
 
-  const wkfw::Worker* nextInstruction() throw(
+  const Worker* nextInstruction() throw(
       InvalidInstuctionsSequenceException) override;
 
  private:
