@@ -1795,4 +1795,8 @@ void yyfree (void * ptr )
 
 
 
+void scanBuffer(const char* buff, size_t size) {
+  YY_BUFFER_STATE bs = yy_scan_buffer(buff,size);
+  yy_switch_to_buffer(bs);
+}
 

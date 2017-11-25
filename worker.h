@@ -96,7 +96,7 @@ class WorkerResult {
  */
 class Worker {
  public:
-  Worker(const size_t identifier) : identifier(identifier) {}
+  Worker(const size_t identifier, WorkerResult::ResultType returnType, WorkerResult::ResultType acceptType) : identifier(identifier), returnType(returnType), acceptType(acceptType) {}
 
   /**
    * Выполняет обработчик блока.
@@ -112,9 +112,19 @@ class Worker {
    * */
   size_t getId() { return identifier; }
   
+  WorkerResult::ResultType getReturnType() const {
+    return returnType;
+  }
+  
+  WorkerResult::ResultType getAcceptType() const {
+    return acceptType;
+  }
+  
   virtual ~Worker() {}
 
  private:
+  const WorkerResult::ResultType returnType;
+  const WorkerResult::ResultType acceptType;
   const size_t identifier;
 };
 

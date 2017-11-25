@@ -13,6 +13,11 @@
 #include "workers.h"
 
 namespace workers {
+  
+wkfw::Worker* constructWorkerByName(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
+  // TODO
+  return nullptr;
+}
 
 const wkfw::WorkerResult ReadFile::execute(const wkfw::WorkerResult& previous)
     const throw(wkfw::WorkerExecuteException) {
