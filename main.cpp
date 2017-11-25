@@ -8,6 +8,10 @@
 
 #include <iostream>
 
-#include "worker.h"
+#include "yacc_parser.h"
 
-int main(int argc, const char* argv[]) { return 0; }
+//#include "worker.h"
+
+int main(int argc, const char* argv[]) {
+  return yyparse();
+}
