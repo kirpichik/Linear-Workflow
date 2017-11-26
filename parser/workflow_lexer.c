@@ -475,7 +475,8 @@ char *yytext;
 #include <stdlib.h>
 #define YYSTYPE char *
 #include "workflow_yacc.h"
-#line 479 "workflow_lexer.c"
+#include "workflow_parser.h"
+#line 480 "workflow_lexer.c"
 
 #define INITIAL 0
 
@@ -657,9 +658,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 6 "workflow_lexer.l"
+#line 7 "workflow_lexer.l"
 
-#line 663 "workflow_lexer.c"
+#line 664 "workflow_lexer.c"
 
 	if ( !(yy_init) )
 		{
@@ -744,57 +745,57 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 7 "workflow_lexer.l"
+#line 8 "workflow_lexer.l"
 return DESC;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 8 "workflow_lexer.l"
+#line 9 "workflow_lexer.l"
 return CSED;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 9 "workflow_lexer.l"
+#line 10 "workflow_lexer.l"
 return RIGHT_ARROW;
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 10 "workflow_lexer.l"
+#line 11 "workflow_lexer.l"
 yylval = strdup(yytext);  return NUMBER;
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 11 "workflow_lexer.l"
+#line 12 "workflow_lexer.l"
 return '=';
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 12 "workflow_lexer.l"
+#line 13 "workflow_lexer.l"
 yylval = strdup(yytext);  return ARGUMENT_IN_QUOTES;
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 13 "workflow_lexer.l"
+#line 14 "workflow_lexer.l"
 yylval = strdup(yytext);  return ARGUMENT;
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 14 "workflow_lexer.l"
+#line 15 "workflow_lexer.l"
 /* Игнорируем комментарии. */
 	YY_BREAK
 case 9:
 /* rule 9 can match eol */
 YY_RULE_SETUP
-#line 15 "workflow_lexer.l"
+#line 16 "workflow_lexer.l"
 /* Игнорируем пробельные символы. */
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 16 "workflow_lexer.l"
+#line 17 "workflow_lexer.l"
 ECHO;
 	YY_BREAK
-#line 798 "workflow_lexer.c"
+#line 799 "workflow_lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1791,12 +1792,28 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 16 "workflow_lexer.l"
+#line 17 "workflow_lexer.l"
 
 
 
-void scanBuffer(const char* buff, size_t size) {
-  YY_BUFFER_STATE bs = yy_scan_buffer(buff,size);
+#define STREAM_BUFFER_SIZE 1024
+
+char* streamBuffer[STREAM_BUFFER_SIZE + 2];
+
+void notifyNewStream(void) {
+  yywrap();
+  BEGIN(INITIAL);
+}
+
+int yywrap() {
+  size_t size = nextBuffer(streamBuffer, STREAM_BUFFER_SIZE);
+  if (!size)
+  return 1;
+  // Ограничители для FLEX
+  streamBuffer[size] = '\0';
+  streamBuffer[size + 1] = '\0';
+  YY_BUFFER_STATE bs = yy_scan_buffer(streamBuffer,size + 2);
   yy_switch_to_buffer(bs);
+  return 0;
 }
 

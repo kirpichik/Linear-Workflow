@@ -18,6 +18,12 @@
  */
 namespace workers {
 
+/**
+ * Фабрика обработчиков блоков.
+ * Подбирает подходящий обработчик исходя из его имени и кол-ва аргументов.
+ *
+ * @return Обработчик, или если не найден nullptr.
+ */
 wkfw::Worker* constructWorkerByName(const size_t ident, const std::string& name, const std::vector<std::string>& args);
 
 /**

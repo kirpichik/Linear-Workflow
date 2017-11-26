@@ -1321,7 +1321,12 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 3:
+        case 2:
+#line 23 "workflow_parser.y"
+    { pushEOF(); }
+    break;
+
+  case 3:
 #line 27 "workflow_parser.y"
     { pushNumber(atoi((yyvsp[(1) - (1)]))); }
     break;
@@ -1358,7 +1363,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 1362 "workflow_yacc.c"
+#line 1367 "workflow_yacc.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1577,10 +1582,6 @@ yyreturn:
 
 void yyerror(const char *s) {
   pushError(s);
-}
-
-int yywrap() {
-  return 1;
 }
 
 

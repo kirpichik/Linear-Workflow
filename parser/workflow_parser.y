@@ -20,7 +20,7 @@ void yyerror(const char *s);
 %%
 
 workflow:
-        description instructions
+        description instructions { pushEOF(); }
 ;
 
 instructions: 
@@ -53,10 +53,6 @@ args_list: /* empty */
 
 void yyerror(const char *s) {
   pushError(s);
-}
-
-int yywrap() {
-  return 1;
 }
 
 

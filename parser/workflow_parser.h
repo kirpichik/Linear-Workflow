@@ -25,6 +25,18 @@ EXTERNC void pushDescEnd(void);
 
 EXTERNC void pushError(const char* msg);
 
+EXTERNC void pushEOF(void);
+
+/**
+ * Записывает новые данные из потока в буфер.
+ *
+ * @param buff Буфер.
+ * @param size Размер буфера.
+ *
+ * @return Количество данных записаных в буфер.
+ */
+EXTERNC size_t nextBuffer(char* buff, size_t size);
+
 #ifdef __cplusplus
 
 #include <exception>
@@ -49,42 +61,11 @@ public:
 private:
   const std::string reason;
 };
-  
-/**
- * Общий интерфейс для парсера, принимающего
- * данные от YACC.
- */
-class YACCParser {
- public:
-  virtual void pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) = 0;
-  virtual void pushInstruction(const size_t number) = 0;
-  virtual void pushError(const std::string& msg) {
-    throwErrorState();
-  }
- protected:
-  /**
-   * Поднять флаг ошибочного состояния.
-   */
-  void throwErrorState() {
-    errorState = true;
-  }
-  
-  /**
-   * @return true, если поднят флаг ошибочного состояния.
-   */
-  bool isErrorState() {
-    return errorState;
-  }
- private:
-  // Флаг выставляется в истину, когда во время разбора
-  // последнего буфера происходит исключение.
-  bool errorState = false;
-};
 
 /**
  * Разбирает, проверяет на валидность и хранит блок описания Workflow.
  */
-class DescriptionParser : protected YACCParser {
+class DescriptionParser {
 public:
   /**
    * Бросается при ошибке в блоке описания Workflow.
@@ -117,15 +98,12 @@ public:
   
 private:
   std::map<size_t, Worker*> description;
-  
-  void pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) override;
-  void pushInstruction(const size_t number) override;
 };
 
 /**
  * Интерфейс для получения дальнейших иструкций обработчику Workflow.
  */
-class InstructionParser : protected YACCParser {
+class InstructionParser {
 public:
   /**
    * Бросает при ошибке в блоке инструкций Workflow.
@@ -135,6 +113,14 @@ public:
     InvalidInstructionException() : InvalidConfigurationException("Invalid symbol in instruction block") {}
    protected:
     InvalidInstructionException(const std::string& desc) : InvalidConfigurationException(desc) {}
+  };
+  
+  /**
+   * Ошибочная последовательность инструкций.
+   */
+  class InvalidInstuctionsSequenceException : public InvalidInstructionException {
+  public:
+    InvalidInstuctionsSequenceException() : InvalidInstructionException("Invalid instructions sequence in instruction block") {}
   };
   
   InstructionParser(const DescriptionParser& desc) throw(InvalidInstructionException)
@@ -162,13 +148,8 @@ public:
   InvalidInstructionException) override;
   
 private:
-  WorkerResult::ResultType previousType = WorkerResult::ResultType::NONE;
+  WorkerResult::ResultType previousType = WorkerResult::NONE;
   std::istream& stream;
-  // Буфер инструкций
-  std::list<size_t> instructBuff;
-  
-  void pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) override;
-  void pushInstruction(const size_t number) override;
 };
 
 /**
@@ -176,12 +157,6 @@ private:
  */
 class ValidateInstructionParser : public InstructionParser {
 public:
-  class InvalidInstuctionsSequenceException
-  : public InvalidInstructionException {
-   public:
-    InvalidInstuctionsSequenceException() : InvalidInstructionException("Invalid instructions sequence in instruction block") {}
-  };
-  
   ValidateInstructionParser(
                             const DescriptionParser& desc,
                             std::istream& stream) throw(InvalidInstructionException);
@@ -191,10 +166,7 @@ public:
   
 private:
   std::vector<size_t> instructions;
-  size_t position;
-  
-  void pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) override;
-  void pushInstruction(const size_t number) override;
+  size_t position = 0;
 };
 
 }
