@@ -31,6 +31,7 @@ EXTERNC void pushError(const char* msg);
 #include <string>
 #include <map>
 #include <vector>
+#include <list>
 
 #include "worker.h"
 
@@ -155,9 +156,7 @@ protected:
  */
 class LazyInstructionParser : public InstructionParser {
 public:
-  LazyInstructionParser(const DescriptionParser& desc,
-                        std::istream& stream) throw(InvalidInstructionException)
-  : InstructionParser(desc), stream(stream) {}
+  LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException);
   
   const Worker* nextInstruction() throw(
   InvalidInstructionException) override;
@@ -166,7 +165,7 @@ private:
   WorkerResult::ResultType previousType = WorkerResult::ResultType::NONE;
   std::istream& stream;
   // Буфер инструкций
-  std::vector<size_t> instructBuff;
+  std::list<size_t> instructBuff;
   
   void pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) override;
   void pushInstruction(const size_t number) override;
@@ -179,6 +178,7 @@ class ValidateInstructionParser : public InstructionParser {
 public:
   class InvalidInstuctionsSequenceException
   : public InvalidInstructionException {
+   public:
     InvalidInstuctionsSequenceException() : InvalidInstructionException("Invalid instructions sequence in instruction block") {}
   };
   

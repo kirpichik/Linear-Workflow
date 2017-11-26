@@ -82,6 +82,19 @@ void lockParserOn(wkfw::YACCParser* parser) {
 }
 
 /**
+ * Выполняет переблокировку на парсер инструкций.
+ * Если еще чтение еще не дошло до блока инструкций,
+ * блокировка игнорируется.
+ *
+ * @param parser Парсер, который будет принимать инструкции
+ */
+void relockToInstructions(wkfw::YACCParser* parser) {
+  if (currentParser.isDescBlock)
+    return;
+  currentParser.currentParser = parser;
+}
+
+/**
  * Снимает блокировку с подключенного парсера.
  * При вызове из потока, который не вызывал блокировку,
  * поведение неопределено.
@@ -102,7 +115,7 @@ void unlockParser() {
  *
  * @return Считаный размер.
  */
-size_t redirectBytes(std::istream& in, char* buff, size_t len) {
+static size_t redirectBytes(std::istream& in, char* buff, size_t len) {
   std::size_t n = 0;
   
   while(len > 0 && in.good()) {
@@ -115,21 +128,37 @@ size_t redirectBytes(std::istream& in, char* buff, size_t len) {
   return n;
 }
 
+/**
+ * Выполняет еще один шаг по перенаправлению буфера.
+ *
+ * @return true, если какие-либо данные были перенаправленны.
+ */
+static bool redirectNextBuffer(std::istream& stream, char* buff) {
+  size_t redirected = redirectBytes(stream, buff, REDIRECT_BUFF_SIZE);
+  
+  if (!redirected)
+    return false;
+  
+  /* Выставление ограничения буфера для лексера. Требуется LEX-ом. */
+  buff[redirected] = '\0';
+  buff[redirected + 1] = '\0';
+  
+  scanBuffer(buff, sizeof(buff));
+  return true;
+}
+
 namespace wkfw {
 
 DescriptionParser::DescriptionParser(std::istream& stream) throw(InvalidDescriptionException) {
+  // Начинаем чтение нашим парсером с блокировки анализатора
+  lockParserOn(this);
+  
   char* buff = new char[REDIRECT_BUFF_SIZE + 2];
+  
   while (true) {
-    size_t redirected = redirectBytes(stream, buff, REDIRECT_BUFF_SIZE);
-  
-    if (!redirected)
+    if (!redirectNextBuffer(stream, buff))
       break;
-      
-    /* Выставление ограничения буфера для лексера */
-    buff[redirected] = '\0';
-    buff[redirected + 1] = '\0';
-  
-    scanBuffer(buff, sizeof(buff));
+    
     if (isErrorState())
       throw InvalidDescriptionException();
   }
@@ -143,15 +172,65 @@ const Worker* DescriptionParser::getWorkerById(const size_t ident) const {
 DescriptionParser::~DescriptionParser() {
   for (auto const& worker : description) delete worker.second;
 }
+  
+LazyInstructionParser::LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc), stream(stream) {
+  relockToInstructions(this);
+}
 
 const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionException) {
-  // TODO - разбор и валидация инструкций
+  if (!instructBuff.empty()) { // В буфере еще есть инструкции
+    const Worker* worker = description.getWorkerById(instructBuff.front());
+    instructBuff.pop_front();
+    return worker;
+  }
+  
+  char* buff = new char[REDIRECT_BUFF_SIZE + 2];
+  
+  while (true) {
+    if (!redirectNextBuffer(stream, buff))
+      break;
+    
+    if (isErrorState())
+      throw InvalidInstructionException();
+    
+    if (!instructBuff.empty()) {
+      const Worker* worker = description.getWorkerById(instructBuff.front());
+      instructBuff.pop_front();
+      return worker;
+    }
+  }
+  
   return nullptr;
 }
 
-ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException)
-: InstructionParser(desc) {
-  // TODO - разбор и валидация инструкций
+ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc) {
+  relockToInstructions(this);
+  
+  char* buff = new char[REDIRECT_BUFF_SIZE + 2];
+  
+  WorkerResult::ResultType previousResult = WorkerResult::ResultType::NONE;
+  
+  while (true) {
+    if (!redirectNextBuffer(stream, buff))
+      break;
+    
+    if (isErrorState())
+      throw InvalidInstructionException();
+    
+    // Получаем обработчика и проверяем соответствие типов.
+    const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
+    if (!worker)
+      throw InvalidInstructionException();
+    if (worker->getAcceptType() != previousResult)
+      throw InvalidInstuctionsSequenceException();
+    previousResult = worker->getReturnType();
+  }
+  
+  // Проверяем последний возращаемый тип на NONE.
+  const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
+  if (worker->getReturnType() != WorkerResult::ResultType::NONE)
+    throw InvalidInstuctionsSequenceException();
+  
 }
 
 const Worker* ValidateInstructionParser::nextInstruction() throw(InvalidInstuctionsSequenceException) {
