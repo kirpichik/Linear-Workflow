@@ -15,7 +15,26 @@
 namespace workers {
   
 wkfw::Worker* constructWorkerByName(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
-  // TODO
+  if (name == "readfile") {
+    if (args.size() == 1)
+      return new ReadFile(ident, args[0]);
+  } else if (name == "writefile") {
+    if (args.size() == 1)
+      return new WriteFile(ident, args[0]);
+  } else if (name == "grep") {
+    if (args.size() == 1)
+      return new Grep(ident, args[0]);
+  } else if (name == "sort") {
+    if (args.size() == 0)
+      return new Sort(ident);
+  } else if (name == "replace") {
+    if (args.size() == 2)
+      return new Replace(ident, args[0], args[1]);
+  } else if (name == "dump") {
+    if (args.size() == 1)
+      return new Dump(ident, args[0]);
+  }
+  
   return nullptr;
 }
 

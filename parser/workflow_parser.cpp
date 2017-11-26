@@ -7,160 +7,232 @@
 //
 
 #include <mutex>
-#include <fstream>
+#include <sstream>
+#include <queue>
+#include <thread>
 
 #include "workflow_parser.h"
 #include "yacc_parser.h"
 #include "workers.h"
 
-struct CurrentParser {
-  // Объект для блокировки
-  std::mutex locker;
-  // Парсер, который подает на вход текст и ожидает уведомления
-  wkfw::YACCParser* currentParser = nullptr;
+/**
+ * Сохраненный терминальный символ.
+ */
+class TerminalSub {
+public:
+  enum Type {
+    DESC_END,    // Конец блока описания
+    END_OF_FILE, // Конец файла
+    COMMAND,     // Команда из блока описания
+    INSTRUCTION, // Инструкция из блока инструкций
+    ERROR,       // Ошибка разбора
+    BEGIN        // Начало разбора
+  };
   
-  /* Так как парсер разбирает в обратном порядке, мы получаем сначала
-   список аргументов команды, потом ее имя, а потом номер.
-   Поэтому мы храним аргументы и имя до тех пор, пока не получим
-   число. После получения числа, уведомляем об этом основной парсер.
-   */
-  // Список запомненных на данный момент аргументов команды
-  std::vector<std::string> currArgs;
-  // Имя команды
+  // DESC_END, END_OF_FILE, ERROR
+  TerminalSub(const Type type) : type(type), instructionNumber(0) {}
+  
+  // COMMAND
+  TerminalSub(const size_t num, const std::string& name, const std::vector<std::string>& args) : type(COMMAND), instructionNumber(num), name(name), args(args) {}
+  
+  // INSTRUCTION
+  TerminalSub(const size_t num) : type(INSTRUCTION), instructionNumber(num) {}
+  
+  // BEGIN
+  TerminalSub() : type(BEGIN), instructionNumber(0) {}
+  
+  const Type getType() {
+    return type;
+  }
+  
+  const size_t getInstNumber() {
+    return instructionNumber;
+  }
+  
+  std::string& getName() {
+    return name;
+  }
+  
+  std::vector<std::string>& getArgs() {
+    return args;
+  }
+  
+  TerminalSub& operator=(const TerminalSub& terminal) {
+    type = terminal.type;
+    instructionNumber = terminal.instructionNumber;
+    name = terminal.name;
+    args = terminal.args;
+    return (*this);
+  }
+  
+private:
+  Type type;
+  size_t instructionNumber;      // Номер инструкции (для INSTRUCTION и COMMAND)
+  std::string name;              // Имя команды
+  std::vector<std::string> args; // Аргументы команды
+  
+};
+
+/**
+ * Текущее состояние YACC парсера.
+ * Сохраненные разобранные данные о команде до помещения в очередь.
+ * Так как о разборе команды уведомляется постепенно в обратном порядке,
+ * то эти данные нужно хранить до заполнения всех полей.
+ *
+ * Сначала получаем и запоминаем аргументы, потом имя команды,
+ * а потом номер. На номере описание команды считается завершенным.
+ *
+ * Если поле isDescBlock выставлено в false, то при получении числа
+ * другие поля не изменяются.
+ */
+struct YACCState {
   std::string commandName;
-  // Если true, то сейчас блок описания, иначе - инструкций
+  std::vector<std::string> args;
   bool isDescBlock = true;
 };
 
-// Размер буфера перенаправления потока C++ в лексер.
-static const size_t REDIRECT_BUFF_SIZE = 1024;
+// Текущее состояние чтения команды. Обнуляется при считывании числа.
+static YACCState currentCommandState;
 
-static CurrentParser currentParser;
+// Текущий поток для перенаправления ввода
+static std::istream* currentStream = nullptr;
 
-void pushArg(const char* arg) {
-  if (!currentParser.currentParser)
-    return;
-  currentParser.currArgs.push_back(std::string(arg));
-}
+// Очередь сохраненных терминальных символов из парсера
+static std::queue<TerminalSub> terminalsQueue;
 
-void pushCommand(const char* cmd) {
-  if (!currentParser.currentParser)
-    return;
-  currentParser.commandName = std::string(cmd);
-}
+// Блокировщик парсинга
+static std::mutex parseLocker;
 
-void pushNumber(int num) {
-  if (!currentParser.currentParser)
-    return;
-  if (currentParser.isDescBlock)
-    currentParser.currentParser->pushCommand(num, currentParser.commandName, currentParser.currArgs);
-  else
-    currentParser.currentParser->pushInstruction(num);
-}
+// Блокировщик очереди
+static std::mutex queueLocker;
 
-void pushDescEnd() {
-  if (!currentParser.currentParser)
-    return;
-  currentParser.isDescBlock = false;
-}
+// Блокировщик потока ввода
+static std::mutex streamLocker;
 
-void pushError(const char* msg) {
-  if (!currentParser.currentParser)
-    return;
-  currentParser.currentParser->pushError(std::string(msg));
+// Поток парсера
+static std::thread* parserThread = nullptr;
+
+static void parserThreadExecutor() {
+  notifyNewStream();
+  yyparse();
+  queueLocker.unlock();
 }
 
 /**
- * Блокирует попытки подключения других парсеров,
- * пока блокировка данного парсера не будет снята.
+ * Устанавливает новый поток для перенаправления в лексер.
  *
- * @param parser Парсер, который хочет получить контроль над вводом.
+ * @param stream Новый поток
  */
-void lockParserOn(wkfw::YACCParser* parser) {
-  currentParser.locker.lock();
-  currentParser.currentParser = parser;
+static void setParserStream(std::istream& stream) {
+  currentStream = &stream;
+  
+  // Блокируем, чтобы парсер прочитал один буфер и остановился.
+  parseLocker.lock();
+  
+  // Блокируем очередь до конца работы парсера
+  queueLocker.lock();
+  
+  // Запускаем отдельный поток для парсера.
+  // Уведомляем парсер о новом потоке, он читает первый буфер и останавливается
+  if (parserThread != nullptr) {
+    // TODO - Остановится ли он?
+    delete parserThread;
+  }
+  parserThread = new std::thread(parserThreadExecutor);
 }
 
-/**
- * Выполняет переблокировку на парсер инструкций.
- * Если еще чтение еще не дошло до блока инструкций,
- * блокировка игнорируется.
- *
- * @param parser Парсер, который будет принимать инструкции
- */
-void relockToInstructions(wkfw::YACCParser* parser) {
-  if (currentParser.isDescBlock)
-    return;
-  currentParser.currentParser = parser;
+static const TerminalSub nextTerminal() {
+  while(true) {
+    // Проверяем наличие элементов в очереди
+    queueLocker.lock();
+    if (!terminalsQueue.empty()) {
+      TerminalSub terminal = terminalsQueue.front();
+      terminalsQueue.pop();
+      queueLocker.unlock();
+      return terminal;
+    }
+    queueLocker.unlock();
+    
+    // Разрешаем парсеру сделать еще одну итерацию.
+    parseLocker.unlock();
+    parseLocker.lock();
+  }
 }
 
-/**
- * Снимает блокировку с подключенного парсера.
- * При вызове из потока, который не вызывал блокировку,
- * поведение неопределено.
- */
-void unlockParser() {
-  currentParser.currentParser = nullptr;
-  currentParser.currArgs.clear();
-  currentParser.isDescBlock = true;
-  currentParser.locker.unlock();
-}
-
-/**
- * Считывает из потока в буфер.
- *
- * @param in Входной поток.
- * @param buff Буфер для записи.
- * @param len Размер буфера.
- *
- * @return Считаный размер.
- */
-static size_t redirectBytes(std::istream& in, char* buff, size_t len) {
+size_t nextBuffer(char* buff, size_t size) {
   std::size_t n = 0;
   
-  while(len > 0 && in.good()) {
-    in.read( &buff[n], len );
-    size_t i = in.gcount();
+  // Разблокируем очередь в конце работы парсера
+  queueLocker.unlock();
+  
+  while(size > 0 && currentStream->good()) {
+    currentStream->read(&buff[n], size);
+    size_t i = currentStream->gcount();
     n += i;
-    len -= i;
+    size -= i;
   }
+  
+  // Ждем, пока нам разрешат читать дальше
+  parseLocker.lock();
+  parseLocker.unlock();
+  
+  // Блокируем очередь до конца работы парсера
+  queueLocker.lock();
   
   return n;
 }
 
-/**
- * Выполняет еще один шаг по перенаправлению буфера.
- *
- * @return true, если какие-либо данные были перенаправленны.
- */
-static bool redirectNextBuffer(std::istream& stream, char* buff) {
-  size_t redirected = redirectBytes(stream, buff, REDIRECT_BUFF_SIZE);
-  
-  if (!redirected)
-    return false;
-  
-  /* Выставление ограничения буфера для лексера. Требуется LEX-ом. */
-  buff[redirected] = '\0';
-  buff[redirected + 1] = '\0';
-  
-  scanBuffer(buff, sizeof(buff));
-  return true;
+void pushArg(const char* arg) {
+  currentCommandState.args.push_back(std::string(arg));
+}
+
+void pushCommand(const char* cmd) {
+  currentCommandState.commandName = std::string(cmd);
+}
+
+void pushNumber(int num) {
+  if (currentCommandState.isDescBlock) {
+    terminalsQueue.push(TerminalSub(num, currentCommandState.commandName, currentCommandState.args));
+      currentCommandState.args.clear();
+    }
+  else
+    terminalsQueue.push(TerminalSub(num));
+}
+
+void pushDescEnd() {
+  terminalsQueue.push(TerminalSub(TerminalSub::DESC_END));
+  currentCommandState.isDescBlock = false;
+}
+
+void pushError(const char* msg) {
+  terminalsQueue.push(TerminalSub(TerminalSub::ERROR));
+}
+
+void pushEOF() {
+  terminalsQueue.push(TerminalSub(TerminalSub::END_OF_FILE));
 }
 
 namespace wkfw {
 
 DescriptionParser::DescriptionParser(std::istream& stream) throw(InvalidDescriptionException) {
-  // Начинаем чтение нашим парсером с блокировки анализатора
-  lockParserOn(this);
+  setParserStream(stream);
   
-  char* buff = new char[REDIRECT_BUFF_SIZE + 2];
-  
-  while (true) {
-    if (!redirectNextBuffer(stream, buff))
-      break;
+  TerminalSub previousSub;
+  while(previousSub.getType() != TerminalSub::DESC_END) {
+    previousSub = nextTerminal();
     
-    if (isErrorState())
-      throw InvalidDescriptionException();
+    switch (previousSub.getType()) {
+      case TerminalSub::COMMAND: {
+        if (description.find(previousSub.getInstNumber()) != description.end())
+          throw InvalidDescriptionException();
+        description[previousSub.getInstNumber()] = workers::constructWorkerByName(previousSub.getInstNumber(), previousSub.getName(), previousSub.getArgs());
+        break;
+      }
+      case TerminalSub::DESC_END:
+        break;
+      default:
+        throw InvalidDescriptionException();
+    }
   }
 }
 
@@ -173,110 +245,59 @@ DescriptionParser::~DescriptionParser() {
   for (auto const& worker : description) delete worker.second;
 }
   
-LazyInstructionParser::LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc), stream(stream) {
-  relockToInstructions(this);
-}
+LazyInstructionParser::LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc), stream(stream) {}
 
 const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionException) {
-  if (!instructBuff.empty()) { // В буфере еще есть инструкции
-    const Worker* worker = description.getWorkerById(instructBuff.front());
-    instructBuff.pop_front();
-    return worker;
-  }
-  
-  char* buff = new char[REDIRECT_BUFF_SIZE + 2];
-  
-  while (true) {
-    if (!redirectNextBuffer(stream, buff))
-      break;
-    
-    if (isErrorState())
-      throw InvalidInstructionException();
-    
-    if (!instructBuff.empty()) {
-      const Worker* worker = description.getWorkerById(instructBuff.front());
-      instructBuff.pop_front();
+  TerminalSub terminal = nextTerminal();
+  switch (terminal.getType()) {
+    case TerminalSub::INSTRUCTION: {
+      const Worker* worker = description.getWorkerById(terminal.getInstNumber());
+      if (!worker)
+        throw InvalidInstructionException();
+      if (worker->getAcceptType() != previousType)
+        throw InvalidInstuctionsSequenceException();
+      previousType = worker->getReturnType();
       return worker;
     }
+    case TerminalSub::END_OF_FILE:
+      return nullptr;
+    default:
+      throw InvalidInstructionException();
   }
-  
-  return nullptr;
 }
 
 ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc) {
-  relockToInstructions(this);
+  TerminalSub terminal;
+  WorkerResult::ResultType previousType = WorkerResult::NONE;
   
-  char* buff = new char[REDIRECT_BUFF_SIZE + 2];
-  
-  WorkerResult::ResultType previousResult = WorkerResult::ResultType::NONE;
-  
-  while (true) {
-    if (!redirectNextBuffer(stream, buff))
-      break;
+  while(terminal.getType() != TerminalSub::END_OF_FILE) {
+    terminal = nextTerminal();
     
-    if (isErrorState())
-      throw InvalidInstructionException();
-    
-    // Получаем обработчика и проверяем соответствие типов.
-    const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
-    if (!worker)
-      throw InvalidInstructionException();
-    if (worker->getAcceptType() != previousResult)
-      throw InvalidInstuctionsSequenceException();
-    previousResult = worker->getReturnType();
+    switch (terminal.getType()) {
+      case TerminalSub::INSTRUCTION: {
+        const Worker* worker = description.getWorkerById(terminal.getInstNumber());
+        if (!worker)
+          throw InvalidInstructionException();
+        if (worker->getAcceptType() != previousType)
+          throw InvalidInstuctionsSequenceException();
+        previousType = worker->getReturnType();
+        instructions.push_back(terminal.getInstNumber());
+      };
+      case TerminalSub::END_OF_FILE:
+        break;
+      default:
+        throw InvalidInstructionException();
+    }
   }
-  
-  // Проверяем последний возращаемый тип на NONE.
+  // Проверяем чтобы последняя инструкция ничего не возращала
   const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
-  if (worker->getReturnType() != WorkerResult::ResultType::NONE)
+  if (worker->getReturnType() != WorkerResult::NONE)
     throw InvalidInstuctionsSequenceException();
-  
 }
 
 const Worker* ValidateInstructionParser::nextInstruction() throw(InvalidInstuctionsSequenceException) {
   if (position >= instructions.size()) return nullptr;
   return description.getWorkerById(instructions[position++]);
-}
-  
-void DescriptionParser::pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
-  Worker* worker = workers::constructWorkerByName(ident, name, args);
-  if (!worker) {
-    throwErrorState();
-    return;
-  }
-  description[ident] = worker;
-}
-
-/**
- * Ничего делать не нужно, т.к. это блок описания.
- */
-void DescriptionParser::pushInstruction(const size_t number) {}
-
-/**
- * Ничего делать не нужно, т.к. это блок инструкций.
- */
-void ValidateInstructionParser::pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) {}
-
-void ValidateInstructionParser::pushInstruction(const size_t number) {
-  instructions.push_back(number);
-}
-
-/**
- * Ничего делать не нужно, т.к. это блок инструкций.
- */
-void LazyInstructionParser::pushCommand(const size_t ident, const std::string& name, const std::vector<std::string>& args) {}
-
-void LazyInstructionParser::pushInstruction(const size_t number) {
-  if (isErrorState())
-    return;
-  
-  const Worker* worker = description.getWorkerById(number);
-  if (!worker || worker->getAcceptType() != previousType) {
-    throwErrorState();
-    return;
-  }
-  previousType = worker->getReturnType();
-  instructBuff.push_back(number);
 }
 
 }
