@@ -116,6 +116,7 @@ static void parserThreadExecutor() {
   notifyNewStream();
   yyparse();
   queueLocker.unlock();
+  parseLocker.unlock();
 }
 
 /**
@@ -248,6 +249,9 @@ DescriptionParser::~DescriptionParser() {
 LazyInstructionParser::LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc), stream(stream) {}
 
 const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionException) {
+  if (position < instructions.size())
+    return description.getWorkerById(instructions[position++]);
+  
   TerminalSub terminal = nextTerminal();
   switch (terminal.getType()) {
     case TerminalSub::INSTRUCTION: {
@@ -257,6 +261,7 @@ const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionE
       if (worker->getAcceptType() != previousType)
         throw InvalidInstuctionsSequenceException();
       previousType = worker->getReturnType();
+      position++;
       return worker;
     }
     case TerminalSub::END_OF_FILE:
@@ -264,6 +269,10 @@ const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionE
     default:
       throw InvalidInstructionException();
   }
+}
+  
+void LazyInstructionParser::resetSteps() {
+  position = 0;
 }
 
 ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException) : InstructionParser(desc) {
@@ -293,6 +302,10 @@ ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& de
   const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
   if (worker->getReturnType() != WorkerResult::NONE)
     throw InvalidInstuctionsSequenceException();
+}
+  
+void ValidateInstructionParser::resetSteps() {
+  position = 0;
 }
 
 const Worker* ValidateInstructionParser::nextInstruction() throw(InvalidInstuctionsSequenceException) {

@@ -132,6 +132,13 @@ public:
   virtual const Worker* nextInstruction() throw(
   InvalidInstructionException) = 0;
   
+  /**
+   * Сбрасывает счетчик шагов в начало.
+   */
+  virtual void resetSteps() = 0;
+  
+  virtual ~InstructionParser() {}
+  
 protected:
   const DescriptionParser& description;
 };
@@ -144,12 +151,15 @@ class LazyInstructionParser : public InstructionParser {
 public:
   LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException);
   
-  const Worker* nextInstruction() throw(
-  InvalidInstructionException) override;
+  const Worker* nextInstruction() throw(InvalidInstructionException) override;
+  
+  void resetSteps() override;
   
 private:
   WorkerResult::ResultType previousType = WorkerResult::NONE;
   std::istream& stream;
+  std::vector<size_t> instructions;
+  size_t position = 0;
 };
 
 /**
@@ -161,8 +171,9 @@ public:
                             const DescriptionParser& desc,
                             std::istream& stream) throw(InvalidInstructionException);
   
-  const Worker* nextInstruction() throw(
-  InvalidInstuctionsSequenceException) override;
+  const Worker* nextInstruction() throw(InvalidInstuctionsSequenceException) override;
+  
+  void resetSteps() override;
   
 private:
   std::vector<size_t> instructions;

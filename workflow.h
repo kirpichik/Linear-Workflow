@@ -25,29 +25,28 @@ namespace wkfw {
  */
 class Workflow {
  public:
-  Workflow(std::istream& stream) throw(InvalidConfigurationException);
+  /**
+   * Типы парсеров инструкций.
+   */
+  enum InstructionParserType {
+    LAZY,  // Читает инструкции по одной и валидирует их во время исполнения.
+    NORMAL // Читает инструкции и валидирует их, после чего выполняет.
+  };
+  
+  Workflow(std::istream& stream, InstructionParserType type) throw(InvalidConfigurationException);
 
   /**
-   * Запустить выполнение используя ленивый парсер инструкций.
-   */
-  void executeLazy() throw(InstructionParser::InvalidInstructionException);
-
-  /**
-   * Запустить выполнение с предварительным парсингом и валидацией инструкций.
-   */
-  void executeNormal() throw(InstructionParser::InvalidInstructionException);
+   * Запустить выполнение инструкций.
+   * */
+  void execute() throw(InstructionParser::InvalidInstructionException);
+  
+  ~Workflow();
 
  private:
+  const InstructionParserType type;
   std::istream& stream;
   const DescriptionParser description;
-
-  /**
-   * Запустить выполнение с данным парсером.
-   *
-   * @param parser Парсер для получения инструкций.
-   * */
-  void execute(InstructionParser& parser) throw(
-      InstructionParser::InvalidInstructionException);
+  InstructionParser* instructionParser;
 };
 
 }  // namespace wkfw

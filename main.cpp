@@ -14,10 +14,11 @@
 int main(int argc, const char* argv[]) {
   std::ifstream file("input.wkfw");
   try {
-    wkfw::Workflow workflow(file);
-    workflow.executeLazy();
+    wkfw::Workflow workflow(file, wkfw::Workflow::NORMAL);
+    workflow.execute();
   } catch(wkfw::InvalidConfigurationException& e) {
     std::cout << e.what() << std::endl;
   }
+  file.close();
   return 0;
 }

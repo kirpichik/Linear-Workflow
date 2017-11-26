@@ -10,28 +10,24 @@
 
 namespace wkfw {
 
-Workflow::Workflow(std::istream& stream) throw(InvalidConfigurationException)
-    : description(DescriptionParser(stream)), stream(stream) {}
-
-void Workflow::executeLazy() throw(
-    InstructionParser::InvalidInstructionException) {
-  LazyInstructionParser parser(description, stream);
-  execute(parser);
+Workflow::Workflow(std::istream& stream, InstructionParserType type) throw(InvalidConfigurationException) : type(type), description(DescriptionParser(stream)), stream(stream) {
+  if (type == LAZY)
+    instructionParser = new LazyInstructionParser(description, stream);
+  else
+    instructionParser = new ValidateInstructionParser(description, stream);
 }
 
-void Workflow::executeNormal() throw(
-    InstructionParser::InvalidInstructionException) {
-  ValidateInstructionParser parser(description, stream);
-  execute(parser);
-}
-
-void Workflow::execute(InstructionParser& parser) throw(
-    InstructionParser::InvalidInstructionException) {
+void Workflow::execute() throw(InstructionParser::InvalidInstructionException) {
   WorkerResult lastResult;
   Worker const* worker;
 
-  while ((worker = parser.nextInstruction()))
+  while ((worker = instructionParser->nextInstruction()))
     lastResult = worker->execute(lastResult);
+}
+  
+Workflow::~Workflow() {
+  if (instructionParser)
+    delete instructionParser;
 }
 
 }  // namespace wkfw
