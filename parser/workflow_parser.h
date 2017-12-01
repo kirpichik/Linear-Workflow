@@ -72,14 +72,7 @@ public:
    */
   class InvalidDescriptionException : public InvalidConfigurationException {
    public:
-    InvalidDescriptionException() : InvalidConfigurationException("Invalid symbol in description block") {}
-   protected:
     InvalidDescriptionException(const std::string& desc) : InvalidConfigurationException(desc) {}
-  };
-  
-  class InvalidDescriptionInstructionException : public InvalidDescriptionException {
-   public:
-    InvalidDescriptionInstructionException() : InvalidDescriptionException("Invalid instruction in description block") {}
   };
   
   DescriptionParser(std::istream& stream) throw(InvalidDescriptionException);
@@ -110,8 +103,6 @@ public:
    */
   class InvalidInstructionException : public InvalidConfigurationException {
    public:
-    InvalidInstructionException() : InvalidConfigurationException("Invalid symbol in instruction block") {}
-   protected:
     InvalidInstructionException(const std::string& desc) : InvalidConfigurationException(desc) {}
   };
   
@@ -121,6 +112,7 @@ public:
   class InvalidInstuctionsSequenceException : public InvalidInstructionException {
   public:
     InvalidInstuctionsSequenceException() : InvalidInstructionException("Invalid instructions sequence in instruction block") {}
+    InvalidInstuctionsSequenceException(const std::string& desc) : InvalidInstructionException(desc) {}
   };
   
   InstructionParser(const DescriptionParser& desc) throw(InvalidInstructionException)

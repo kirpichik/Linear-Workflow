@@ -42,7 +42,8 @@ class WorkerExecuteException : public std::exception {
  */
 class WorkerResult {
  public:
-  enum ResultType { NONE, TEXT };
+  enum ResultType { UNKNOWN, NONE, TEXT };
+  
   /**
    * Результат выполнения отсутствует.
    */

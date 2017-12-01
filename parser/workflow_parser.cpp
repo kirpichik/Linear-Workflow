@@ -225,14 +225,14 @@ DescriptionParser::DescriptionParser(std::istream& stream) throw(InvalidDescript
     switch (previousSub.getType()) {
       case TerminalSub::COMMAND: {
         if (description.find(previousSub.getInstNumber()) != description.end())
-          throw InvalidDescriptionException();
+          throw InvalidDescriptionException("Repeating instructions number.");
         description[previousSub.getInstNumber()] = workers::constructWorkerByName(previousSub.getInstNumber(), previousSub.getName(), previousSub.getArgs());
         break;
       }
       case TerminalSub::DESC_END:
         break;
       default:
-        throw InvalidDescriptionException();
+        throw InvalidDescriptionException("Invalid symbols in description block.");
     }
   }
 }
@@ -257,8 +257,8 @@ const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionE
     case TerminalSub::INSTRUCTION: {
       const Worker* worker = description.getWorkerById(terminal.getInstNumber());
       if (!worker)
-        throw InvalidInstructionException();
-      if (worker->getAcceptType() != previousType)
+        throw InvalidInstructionException("Unknown instruction number: " + std::to_string(terminal.getInstNumber()));
+      if (position && worker->getAcceptType() != previousType)
         throw InvalidInstuctionsSequenceException();
       previousType = worker->getReturnType();
       position++;
@@ -267,7 +267,7 @@ const Worker* LazyInstructionParser::nextInstruction() throw(InvalidInstructionE
     case TerminalSub::END_OF_FILE:
       return nullptr;
     default:
-      throw InvalidInstructionException();
+      throw InvalidInstructionException("Unknown symbol in instruction block.");
   }
 }
   
@@ -286,8 +286,8 @@ ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& de
       case TerminalSub::INSTRUCTION: {
         const Worker* worker = description.getWorkerById(terminal.getInstNumber());
         if (!worker)
-          throw InvalidInstructionException();
-        if (worker->getAcceptType() != previousType)
+          throw InvalidInstructionException("Unknown instruction number: " + std::to_string(terminal.getInstNumber()));
+        if (instructions.size() != 0 && worker->getAcceptType() != previousType)
           throw InvalidInstuctionsSequenceException();
         previousType = worker->getReturnType();
         instructions.push_back(terminal.getInstNumber());
@@ -295,13 +295,9 @@ ValidateInstructionParser::ValidateInstructionParser(const DescriptionParser& de
       case TerminalSub::END_OF_FILE:
         break;
       default:
-        throw InvalidInstructionException();
+        throw InvalidInstructionException("Unknown symbol in instruction block.");
     }
   }
-  // Проверяем чтобы последняя инструкция ничего не возращала
-  const Worker* worker = description.getWorkerById(instructions[instructions.size() - 1]);
-  if (worker->getReturnType() != WorkerResult::NONE)
-    throw InvalidInstuctionsSequenceException();
 }
   
 void ValidateInstructionParser::resetSteps() {

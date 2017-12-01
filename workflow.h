@@ -33,17 +33,18 @@ class Workflow {
     NORMAL // Читает инструкции и валидирует их, после чего выполняет.
   };
   
-  Workflow(std::istream& stream, InstructionParserType type) throw(InvalidConfigurationException);
+  Workflow(std::istream& stream, const InstructionParserType type, const std::string& ifname, const std::string& ofname) throw(InvalidConfigurationException);
 
   /**
    * Запустить выполнение инструкций.
    * */
-  void execute() throw(InstructionParser::InvalidInstructionException);
+  void execute() throw(InstructionParser::InvalidInstructionException, wkfw::WorkerExecuteException);
   
   ~Workflow();
 
  private:
-  const InstructionParserType type;
+  const std::string ifname;
+  const std::string ofname;
   std::istream& stream;
   const DescriptionParser description;
   InstructionParser* instructionParser;
