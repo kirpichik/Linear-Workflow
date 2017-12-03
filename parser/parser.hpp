@@ -40,8 +40,6 @@
 #ifndef YY_YY_PARSER_HPP_INCLUDED
 # define YY_YY_PARSER_HPP_INCLUDED
 
-#define YY_NULLPTR 0
-
 // //                    "%code requires" blocks.
 #line 12 "parser.y" // lalr1.cc:392
 

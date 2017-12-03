@@ -71,7 +71,7 @@ public:
 private:
   std::map<size_t, const Worker*> description;
   std::vector<size_t> instructions;
-  size_t position;
+  size_t position = 0;
   std::string errorMsg;
   
   /**

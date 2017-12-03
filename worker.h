@@ -111,7 +111,7 @@ class Worker {
   /**
    * @return Уникальный номер инструкции в общем наборе инструкций
    * */
-  size_t getId() { return identifier; }
+  size_t getId() const { return identifier; }
   
   WorkerResult::ResultType getReturnType() const {
     return returnType;

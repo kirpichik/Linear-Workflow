@@ -57,6 +57,9 @@ void WorkflowParser::resetSteps() {
 }
   
 void WorkflowParser::receiveInstruction(const size_t num) {
+  if (description.find(num) == description.end())
+    throw InvalidWorkflowException("Unknown instruction number: " + std::to_string(num));
+  
   instructions.push_back(num);
 }
   
