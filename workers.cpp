@@ -14,7 +14,7 @@
 
 namespace workers {
   
-wkfw::Worker* constructWorkerByName(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
+const wkfw::Worker* constructWorker(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
   if (name == "readfile") {
     if (args.size() == 1)
       return new ReadFile(ident, args[0]);

@@ -24,7 +24,7 @@ namespace workers {
  *
  * @return Обработчик, или если не найден nullptr.
  */
-wkfw::Worker* constructWorkerByName(const size_t ident, const std::string& name, const std::vector<std::string>& args);
+const wkfw::Worker* constructWorker(const size_t ident, const std::string& name, const std::vector<std::string>& args);
 
 /**
  * Считывание текстового файла в память, целиком.

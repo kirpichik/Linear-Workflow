@@ -10,7 +10,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include "workflow.h"
 
@@ -19,7 +18,6 @@ int main(int argc, const char* argv[]) {
   std::string inputFilename;
   std::string outputFilename;
   std::string workflowInput;
-  wkfw::Workflow::InstructionParserType type = wkfw::Workflow::NORMAL;
   
   // Разбор аргументов командной строки
   for (auto i = args.begin(); i < args.end(); i++) {
@@ -29,8 +27,6 @@ int main(int argc, const char* argv[]) {
         return 1;
       }
       workflowInput = *i;
-    } else if ((*i) == "-lazy") { // Опции без аргументов
-      type = wkfw::Workflow::LAZY;
     } else if ((i + 1) == args.end() || (*(i + 1))[0] == '-') { // Опции с аргументами
       std::cout << "Option " << *i << " is not set." << std::endl;
       return 1;
@@ -63,12 +59,16 @@ int main(int argc, const char* argv[]) {
     std::cout << "Cannot open file: \"" << workflowInput << "\"" << std::endl;
     return 1;
   }
+  
   try {
-    wkfw::Workflow workflow(file, type, inputFilename, outputFilename);
+    wkfw::Workflow workflow(file, inputFilename, outputFilename);
     workflow.execute();
-  } catch(const std::exception& e) {
-    std::cout << e.what() << std::endl;
+  } catch(const wkfw::InvalidWorkflowException& e) {
+    std::cout << "InvalidWorkflowException: " << e.what() << std::endl;
+  } catch(const wkfw::WorkerExecuteException& e) {
+    std::cout << "WorkerExecuteException: " << e.what() << std::endl;
   }
+  
   file.close();
   return 0;
 }

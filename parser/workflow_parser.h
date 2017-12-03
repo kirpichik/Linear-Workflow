@@ -9,52 +9,25 @@
 #ifndef WORKFLOW_PARSER_H_
 #define WORKFLOW_PARSER_H_
 
-#ifdef __cplusplus
-#define EXTERNC extern "C"
-#else
-#define EXTERNC
-#endif
-
-EXTERNC void pushArg(const char* arg);
-
-EXTERNC void pushCommand(const char* cmd);
-
-EXTERNC void pushNumber(int num);
-
-EXTERNC void pushDescEnd(void);
-
-EXTERNC void pushError(const char* msg);
-
-EXTERNC void pushEOF(void);
-
-/**
- * Записывает новые данные из потока в буфер.
- *
- * @param buff Буфер.
- * @param size Размер буфера.
- *
- * @return Количество данных записаных в буфер.
- */
-EXTERNC size_t nextBuffer(char* buff, size_t size);
-
-#ifdef __cplusplus
-
 #include <exception>
 #include <string>
 #include <map>
 #include <vector>
-#include <list>
+
+#include "lexer.h"
+#include "parser.hpp"
+#include "parser_types.h"
 
 #include "worker.h"
 
 namespace wkfw {
 
 /**
- * Бросается при любых ошибках разбора конфигурации.
+ * Бросается при любых ошибках разбора Workflow.
  */
-class InvalidConfigurationException : public std::exception {
+class InvalidWorkflowException : public std::exception {
 public:
-  InvalidConfigurationException(const std::string& desc) : reason(desc) {}
+  InvalidWorkflowException(const std::string& desc) : reason(desc) {}
   
   const char* what() const throw() override { return reason.c_str(); }
   
@@ -63,19 +36,12 @@ private:
 };
 
 /**
- * Разбирает, проверяет на валидность и хранит блок описания Workflow.
+ * Разбирает, проверяет на валидность и хранит описание Workflow.
  */
-class DescriptionParser {
+class WorkflowParser {
 public:
-  /**
-   * Бросается при ошибке в блоке описания Workflow.
-   */
-  class InvalidDescriptionException : public InvalidConfigurationException {
-   public:
-    InvalidDescriptionException(const std::string& desc) : InvalidConfigurationException(desc) {}
-  };
   
-  DescriptionParser(std::istream& stream) throw(InvalidDescriptionException);
+  WorkflowParser(std::istream& stream) throw(InvalidWorkflowException);
   
   /**
    * Получает обработчик по его уникальному номеру.
@@ -87,95 +53,45 @@ public:
    */
   const Worker* getWorkerById(const size_t ident) const;
   
-  ~DescriptionParser();
-  
-private:
-  std::map<size_t, Worker*> description;
-};
-
-/**
- * Интерфейс для получения дальнейших иструкций обработчику Workflow.
- */
-class InstructionParser {
-public:
-  /**
-   * Бросает при ошибке в блоке инструкций Workflow.
-   */
-  class InvalidInstructionException : public InvalidConfigurationException {
-   public:
-    InvalidInstructionException(const std::string& desc) : InvalidConfigurationException(desc) {}
-  };
-  
-  /**
-   * Ошибочная последовательность инструкций.
-   */
-  class InvalidInstuctionsSequenceException : public InvalidInstructionException {
-  public:
-    InvalidInstuctionsSequenceException() : InvalidInstructionException("Invalid instructions sequence in instruction block") {}
-    InvalidInstuctionsSequenceException(const std::string& desc) : InvalidInstructionException(desc) {}
-  };
-  
-  InstructionParser(const DescriptionParser& desc) throw(InvalidInstructionException)
-  : description(desc) {}
-  
   /**
    * @return Следующая инструкция для исполнения Workflow.
    */
-  virtual const Worker* nextInstruction() throw(
-  InvalidInstructionException) = 0;
+  const Worker* nextInstruction();
   
   /**
    * Сбрасывает счетчик шагов в начало.
    */
-  virtual void resetSteps() = 0;
+  void resetSteps();
   
-  virtual ~InstructionParser() {}
+  WorkflowParser();
   
-protected:
-  const DescriptionParser& description;
-};
-
-/**
- * Ленивый парсер инструкций.
- * Считывает следующую инструкцию по запросу и не проводит ее валидацию.
- */
-class LazyInstructionParser : public InstructionParser {
-public:
-  LazyInstructionParser(const DescriptionParser& desc, std::istream& stream) throw(InvalidInstructionException);
-  
-  const Worker* nextInstruction() throw(InvalidInstructionException) override;
-  
-  void resetSteps() override;
+  friend class FlexWorkflowLexer;
+  friend class BisonWorkflowParser;
   
 private:
-  WorkerResult::ResultType previousType = WorkerResult::NONE;
-  std::istream& stream;
+  std::map<size_t, const Worker*> description;
   std::vector<size_t> instructions;
-  size_t position = 0;
-};
-
-/**
- * Считывает все инструкции при инициализации и проводит их валидацию.
- */
-class ValidateInstructionParser : public InstructionParser {
-public:
-  ValidateInstructionParser(
-                            const DescriptionParser& desc,
-                            std::istream& stream) throw(InvalidInstructionException);
+  size_t position;
+  std::string errorMsg;
   
-  const Worker* nextInstruction() throw(InvalidInstuctionsSequenceException) override;
+  /**
+   * Проверяет валидность команды и запоминает ее.
+   *
+   * @param cmd Команда
+   */
+  void receiveCommand(const WorkflowCommand& cmd) throw(InvalidWorkflowException);
   
-  void resetSteps() override;
+  /**
+   * Запоминает инструкцию/
+   */
+  void receiveInstruction(const size_t num);
   
-private:
-  std::vector<size_t> instructions;
-  size_t position = 0;
+  /**
+   * Бросает исключение из парсера.
+   */
+  void receiveError(const std::string& msg) throw(InvalidWorkflowException);
 };
 
 }
-
-#endif /* __cplusplus */
-
-#undef EXTERNC
 
 #endif /* WORKFLOW_PARSER_H_ */

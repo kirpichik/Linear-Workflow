@@ -11,16 +11,11 @@
 
 namespace wkfw {
 
-Workflow::Workflow(std::istream& stream, const InstructionParserType type, const std::string& ifname, const std::string& ofname) throw(InvalidConfigurationException) : description(DescriptionParser(stream)), stream(stream), ifname(ifname), ofname(ofname) {
-  if (type == LAZY)
-    instructionParser = new LazyInstructionParser(description, stream);
-  else
-    instructionParser = new ValidateInstructionParser(description, stream);
-}
+Workflow::Workflow(std::istream& stream, const std::string& ifname, const std::string& ofname) throw(InvalidWorkflowException) : parser(WorkflowParser(stream)), ifname(ifname), ofname(ofname) {}
 
-void Workflow::execute() throw(InstructionParser::InvalidInstructionException, wkfw::WorkerExecuteException) {
+void Workflow::execute() throw(WorkerExecuteException) {
   WorkerResult lastResult;
-  Worker const* worker = instructionParser->nextInstruction();
+  Worker const* worker = parser.nextInstruction();
   
   if (worker == nullptr)
     return;
@@ -28,27 +23,23 @@ void Workflow::execute() throw(InstructionParser::InvalidInstructionException, w
   // Проверяем наличие чтения из файла
   if (worker->getAcceptType() != WorkerResult::NONE) {
     if (ifname == "")
-      throw InstructionParser::InvalidInstuctionsSequenceException("No input file set.");
+      throw WorkerExecuteException("No input file set.");
     workers::ReadFile reader(0, ifname);
     lastResult = reader.execute(lastResult);
   }
 
+  // Выполняем инструкции
   do
     lastResult = worker->execute(lastResult);
-  while ((worker = instructionParser->nextInstruction()));
+  while ((worker = parser.nextInstruction()));
   
   // Проверяем наличие записи в файл
   if (lastResult.getType() != WorkerResult::NONE) {
     if (ofname == "")
-      throw InstructionParser::InvalidInstuctionsSequenceException("No output file set.");
+      throw WorkerExecuteException("No output file set.");
     workers::WriteFile writer(0, ofname);
     writer.execute(lastResult);
   }
-}
-  
-Workflow::~Workflow() {
-  if (instructionParser)
-    delete instructionParser;
 }
 
 }  // namespace wkfw
