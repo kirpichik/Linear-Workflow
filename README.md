@@ -74,22 +74,36 @@ idA -> idB -> idC -> ... idZ # Описание структуры схемы
 
 ### Пример с указанными входными и выходными файлами
 
+```
 desc
+
 1 = replace abracadabra cadabraabra
+
 2 = grep braab
+
 3 = sort
+
 0 = readfile in.txt
+
 5 = writefile out.txt
+
 csed
+
 0 -> 1 -> 2 -> 3 -> 5
+```
 
 ### Пример без указанных файлов
-
+```
 desc
+
 1 = grep some_word
+
 2 = sort
+
 csed
+
 1 -> 2
+```
 
 ## Сборка
 
