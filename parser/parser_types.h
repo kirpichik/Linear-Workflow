@@ -18,19 +18,20 @@ namespace wkfw {
  * Команда из блока команд для парсера
  */
 struct WorkflowCommand {
-
   size_t instructionNumber;
   std::string name;
   std::vector<std::string> args;
-  
-  WorkflowCommand(const size_t num, const std::string& name, const std::vector<std::string>& args) : instructionNumber(num), name(name), args(args) {}
-  
+
+  WorkflowCommand(const size_t num,
+                  const std::string& name,
+                  const std::vector<std::string>& args)
+      : instructionNumber(num), name(name), args(args) {}
+
   WorkflowCommand() : instructionNumber(0), name(), args() {}
-  
+
   ~WorkflowCommand() {}
-  
 };
-  
-} // namespace wkfw
+
+}  // namespace wkfw
 
 #endif /* PARSER_TYPES_H */

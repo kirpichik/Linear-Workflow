@@ -25,8 +25,9 @@ namespace wkfw {
  */
 class Workflow {
  public:
-  
-  Workflow(std::istream& stream, const std::string& ifname, const std::string& ofname) throw(InvalidWorkflowException);
+  Workflow(std::istream& stream,
+           const std::string& ifname,
+           const std::string& ofname) throw(InvalidWorkflowException);
 
   /**
    * Запустить выполнение инструкций.

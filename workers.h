@@ -24,7 +24,9 @@ namespace workers {
  *
  * @return Обработчик, или если не найден nullptr.
  */
-const wkfw::Worker* constructWorker(const size_t ident, const std::string& name, const std::vector<std::string>& args);
+const wkfw::Worker* constructWorker(const size_t ident,
+                                    const std::string& name,
+                                    const std::vector<std::string>& args);
 
 /**
  * Считывание текстового файла в память, целиком.
@@ -34,7 +36,10 @@ const wkfw::Worker* constructWorker(const size_t ident, const std::string& name,
 class ReadFile : public wkfw::Worker {
  public:
   ReadFile(const size_t ident, const std::string& filename)
-      : wkfw::Worker(ident, wkfw::WorkerResult::ResultType::TEXT, wkfw::WorkerResult::ResultType::NONE), filename(filename) {}
+      : wkfw::Worker(ident,
+                     wkfw::WorkerResult::ResultType::TEXT,
+                     wkfw::WorkerResult::ResultType::NONE),
+        filename(filename) {}
 
   const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
       throw(wkfw::WorkerExecuteException) override;
@@ -51,12 +56,20 @@ class ReadFile : public wkfw::Worker {
 class WriteFile : public wkfw::Worker {
  public:
   WriteFile(const size_t ident, const std::string& filename)
-      : wkfw::Worker(ident, wkfw::WorkerResult::ResultType::NONE, wkfw::WorkerResult::ResultType::TEXT), filename(filename) {}
+      : wkfw::Worker(ident,
+                     wkfw::WorkerResult::ResultType::NONE,
+                     wkfw::WorkerResult::ResultType::TEXT),
+        filename(filename) {}
 
-  virtual const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const throw(wkfw::WorkerExecuteException) override;
-  
+  virtual const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous)
+      const throw(wkfw::WorkerExecuteException) override;
+
  protected:
-  WriteFile(const size_t ident, const std::string& filename, wkfw::WorkerResult::ResultType returnType) : wkfw::Worker(ident, returnType, wkfw::WorkerResult::ResultType::TEXT), filename(filename) {}
+  WriteFile(const size_t ident,
+            const std::string& filename,
+            wkfw::WorkerResult::ResultType returnType)
+      : wkfw::Worker(ident, returnType, wkfw::WorkerResult::ResultType::TEXT),
+        filename(filename) {}
 
  private:
   const std::string filename;
@@ -71,7 +84,10 @@ class WriteFile : public wkfw::Worker {
 class Grep : public wkfw::Worker {
  public:
   Grep(const size_t ident, const std::string& pattern)
-      : Worker(ident, wkfw::WorkerResult::ResultType::TEXT, wkfw::WorkerResult::ResultType::TEXT), pattern(pattern) {}
+      : Worker(ident,
+               wkfw::WorkerResult::ResultType::TEXT,
+               wkfw::WorkerResult::ResultType::TEXT),
+        pattern(pattern) {}
 
   const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
       throw(wkfw::WorkerExecuteException) override;
@@ -87,7 +103,10 @@ class Grep : public wkfw::Worker {
  */
 class Sort : public wkfw::Worker {
  public:
-  Sort(const size_t ident) : wkfw::Worker(ident, wkfw::WorkerResult::ResultType::TEXT, wkfw::WorkerResult::ResultType::TEXT) {}
+  Sort(const size_t ident)
+      : wkfw::Worker(ident,
+                     wkfw::WorkerResult::ResultType::TEXT,
+                     wkfw::WorkerResult::ResultType::TEXT) {}
 
   const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
       throw(wkfw::WorkerExecuteException) override;
@@ -100,9 +119,14 @@ class Sort : public wkfw::Worker {
  */
 class Replace : public wkfw::Worker {
  public:
-  Replace(const size_t ident, const std::string& pattern,
+  Replace(const size_t ident,
+          const std::string& pattern,
           const std::string& substitution)
-      : wkfw::Worker(ident, wkfw::WorkerResult::ResultType::TEXT, wkfw::WorkerResult::ResultType::TEXT), pattern(pattern), substitution(substitution) {}
+      : wkfw::Worker(ident,
+                     wkfw::WorkerResult::ResultType::TEXT,
+                     wkfw::WorkerResult::ResultType::TEXT),
+        pattern(pattern),
+        substitution(substitution) {}
 
   const wkfw::WorkerResult execute(const wkfw::WorkerResult& previous) const
       throw(wkfw::WorkerExecuteException) override;

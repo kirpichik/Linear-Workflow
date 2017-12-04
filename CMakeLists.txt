@@ -7,7 +7,7 @@ if(NOT FLEX_FOUND)
 message(SEND_ERROR "FLEX not found.")
 return()
 else()
-include_directories(${FLEX_INCLUDE_DIRS})
+include_directories(${FLEX_INCLUDE_DIR})
 endif()
 
 find_package(BISON REQUIRED)
@@ -21,6 +21,7 @@ ADD_FLEX_BISON_DEPENDENCY(WorkflowLexer WorkflowParser)
 endif()
 
 add_definitions(-std=c++11)
+add_definitions(-DYY_NULLPTR=0)
 
 include_directories(.)
 include_directories(./parser)

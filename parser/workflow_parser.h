@@ -10,8 +10,8 @@
 #define WORKFLOW_PARSER_H_
 
 #include <exception>
-#include <string>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "lexer.h"
@@ -26,12 +26,12 @@ namespace wkfw {
  * Бросается при любых ошибках разбора Workflow.
  */
 class InvalidWorkflowException : public std::exception {
-public:
+ public:
   InvalidWorkflowException(const std::string& desc) : reason(desc) {}
-  
+
   const char* what() const throw() override { return reason.c_str(); }
-  
-private:
+
+ private:
   const std::string reason;
 };
 
@@ -39,10 +39,9 @@ private:
  * Разбирает, проверяет на валидность и хранит описание Workflow.
  */
 class WorkflowParser {
-public:
-  
+ public:
   WorkflowParser(std::istream& stream) throw(InvalidWorkflowException);
-  
+
   /**
    * Получает обработчик по его уникальному номеру.
    *
@@ -52,46 +51,47 @@ public:
    * если обработчика с данным номером не существует.
    */
   const Worker* getWorkerById(const size_t ident) const;
-  
+
   /**
    * @return Следующая инструкция для исполнения Workflow.
    */
   const Worker* nextInstruction();
-  
+
   /**
    * Сбрасывает счетчик шагов в начало.
    */
   void resetSteps();
-  
+
   WorkflowParser();
-  
+
   friend class FlexWorkflowLexer;
   friend class BisonWorkflowParser;
-  
-private:
+
+ private:
   std::map<size_t, const Worker*> description;
   std::vector<size_t> instructions;
   size_t position = 0;
   std::string errorMsg;
-  
+
   /**
    * Проверяет валидность команды и запоминает ее.
    *
    * @param cmd Команда
    */
-  void receiveCommand(const WorkflowCommand& cmd) throw(InvalidWorkflowException);
-  
+  void receiveCommand(const WorkflowCommand& cmd) throw(
+      InvalidWorkflowException);
+
   /**
    * Запоминает инструкцию/
    */
   void receiveInstruction(const size_t num);
-  
+
   /**
    * Бросает исключение из парсера.
    */
   void receiveError(const std::string& msg) throw(InvalidWorkflowException);
 };
 
-}
+}  // namespace wkfw
 
 #endif /* WORKFLOW_PARSER_H_ */

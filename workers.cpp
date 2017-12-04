@@ -13,8 +13,10 @@
 #include "workers.h"
 
 namespace workers {
-  
-const wkfw::Worker* constructWorker(const size_t ident, const std::string& name, const std::vector<std::string>& args) {
+
+const wkfw::Worker* constructWorker(const size_t ident,
+                                    const std::string& name,
+                                    const std::vector<std::string>& args) {
   if (name == "readfile") {
     if (args.size() == 1)
       return new ReadFile(ident, args[0]);
@@ -34,7 +36,7 @@ const wkfw::Worker* constructWorker(const size_t ident, const std::string& name,
     if (args.size() == 1)
       return new Dump(ident, args[0]);
   }
-  
+
   return nullptr;
 }
 
@@ -48,7 +50,8 @@ const wkfw::WorkerResult ReadFile::execute(const wkfw::WorkerResult& previous)
   try {
     input.open(filename);
     std::string line;
-    while (!input.eof() && std::getline(input, line)) list.push_back(line);
+    while (!input.eof() && std::getline(input, line))
+      list.push_back(line);
     input.close();
   } catch (std::ifstream::failure& e) {
     if (!input.eof())
@@ -67,7 +70,8 @@ const wkfw::WorkerResult WriteFile::execute(const wkfw::WorkerResult& previous)
 
   try {
     output.open(filename);
-    for (auto const& line : previous.getValue()) output << line << std::endl;
+    for (auto const& line : previous.getValue())
+      output << line << std::endl;
     output.close();
   } catch (std::ofstream::failure& e) {
     throw wkfw::WorkerExecuteException("Cannot write lines to file \"" +
@@ -82,7 +86,8 @@ const wkfw::WorkerResult Grep::execute(const wkfw::WorkerResult& previous) const
   std::vector<std::string> list;
 
   for (auto const& line : previous.getValue())
-    if (line.find(pattern) != -1) list.push_back(line);
+    if (line.find(pattern) != -1)
+      list.push_back(line);
 
   return wkfw::WorkerResult(list);
 }
@@ -105,13 +110,15 @@ const wkfw::WorkerResult Sort::execute(const wkfw::WorkerResult& previous) const
  *
  * @return Строка с примененными заменами.
  */
-static std::string replace(const std::string& str, const std::string& pattern,
+static std::string replace(const std::string& str,
+                           const std::string& pattern,
                            const std::string& substitution) {
   std::string result(str);
   size_t index = 0;
   while (true) {
     index = str.find(pattern, index);
-    if (index == std::string::npos) break;
+    if (index == std::string::npos)
+      break;
     result.replace(index, pattern.size(), substitution);
     index += substitution.size();
   }

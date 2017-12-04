@@ -43,7 +43,7 @@ class WorkerExecuteException : public std::exception {
 class WorkerResult {
  public:
   enum ResultType { UNKNOWN, NONE, TEXT };
-  
+
   /**
    * Результат выполнения отсутствует.
    */
@@ -83,7 +83,8 @@ class WorkerResult {
    * @return Результат выполнения.
    */
   const std::vector<std::string> getValue() const throw(NoResultException) {
-    if (type == NONE) throw NoResultException();
+    if (type == NONE)
+      throw NoResultException();
     return value;
   }
 
@@ -97,7 +98,12 @@ class WorkerResult {
  */
 class Worker {
  public:
-  Worker(const size_t identifier, WorkerResult::ResultType returnType, WorkerResult::ResultType acceptType) : identifier(identifier), returnType(returnType), acceptType(acceptType) {}
+  Worker(const size_t identifier,
+         WorkerResult::ResultType returnType,
+         WorkerResult::ResultType acceptType)
+      : identifier(identifier),
+        returnType(returnType),
+        acceptType(acceptType) {}
 
   /**
    * Выполняет обработчик блока.
@@ -112,15 +118,11 @@ class Worker {
    * @return Уникальный номер инструкции в общем наборе инструкций
    * */
   size_t getId() const { return identifier; }
-  
-  WorkerResult::ResultType getReturnType() const {
-    return returnType;
-  }
-  
-  WorkerResult::ResultType getAcceptType() const {
-    return acceptType;
-  }
-  
+
+  WorkerResult::ResultType getReturnType() const { return returnType; }
+
+  WorkerResult::ResultType getAcceptType() const { return acceptType; }
+
   virtual ~Worker() {}
 
  private:
