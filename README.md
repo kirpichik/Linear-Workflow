@@ -9,15 +9,10 @@
 
 ```
 desc # Описание блоков схемы
-
 id1 = block1
-
 id2 = block2
-
 ...
-
 idN = blockN
-
 csed
 idA -> idB -> idC -> ... idZ # Описание структуры схемы
 ```
@@ -76,32 +71,21 @@ idA -> idB -> idC -> ... idZ # Описание структуры схемы
 
 ```
 desc
-
 1 = replace abracadabra cadabraabra
-
 2 = grep braab
-
 3 = sort
-
 0 = readfile in.txt
-
 5 = writefile out.txt
-
 csed
-
 0 -> 1 -> 2 -> 3 -> 5
 ```
 
 ### Пример без указанных файлов
 ```
 desc
-
 1 = grep some_word
-
 2 = sort
-
 csed
-
 1 -> 2
 ```
 
