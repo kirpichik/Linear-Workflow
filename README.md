@@ -30,29 +30,30 @@ idA -> idB -> idC -> ... idZ # Описание структуры схемы
 
 После описания команды указан принимаемый тип -> возвращаемый тип.
 
-**Возвращаемый тип должен соответствовать принимаемому!**
+**Тип возвращаемого значения текущей команды должен соответствовать
+типу принимаемого значения следующей за ней команды в списке исполнения!**
 
-1. readfile < filename >; None -> Text:
+1. **readfile** < filename > ; *None -> Text*:
 
 Считывает текстовый файл в память целиком.
 
-2. writefile < filename >; Text -> None:
+2. **writefile** < filename > ; *Text -> None*:
 
 Записывает текст в файл и является завершением конвейра.
 
-3. grep < word >; Text -> Text:
+3. **grep** < word > ; *Text -> Text*:
 
 Выбирает из входного текста строки, разделенные символом переноса строки и содержащие слово заданное слово.
 
-4. sort; Text -> Text:
+4. **sort** ; *Text -> Text*:
 
 Сортирует строки текста.
 
-5. replace < pattern > < substitution >; Text -> Text:
+5. **replace** < pattern > < substitution > ; *Text -> Text*:
 
 Заменяет слова в тексте.
 
-6. dump <filename>; Text -> Text:
+6. **dump** <filename> ; *Text -> Text*:
 
 Записывает текст в файл.
 
@@ -98,10 +99,6 @@ csed
 Переходим в репозиторий:
 
 `cd Linear-Workflow`
-
-Генерируем Bison и Flex файлы:
-
-`cd parser && ./make-flex-bison.sh && cd ..`
 
 Генерируем Makefile:
 
