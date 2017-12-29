@@ -1,6 +1,2 @@
 *.wkfw
 build/
-parser/lexer.cpp
-parser/parser.cpp
-parser/parser.hpp
-parser/stack.hh
