@@ -1,2 +1,4 @@
 *.wkfw
 build/
+parser/
+

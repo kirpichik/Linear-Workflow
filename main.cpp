@@ -23,41 +23,41 @@ int main(int argc, const char* argv[]) {
   for (auto i = args.begin(); i < args.end(); i++) {
     if ((*i)[0] != '-') {  // Не название опции
       if (workflowInput != "") {
-        std::cout << "Multiply workflow input files." << std::endl;
+        std::cerr << "To many workflow input files." << std::endl;
         return 1;
       }
       workflowInput = *i;
     } else if ((i + 1) == args.end() ||
                (*(i + 1))[0] == '-') {  // Опции с аргументами
-      std::cout << "Option " << *i << " is not set." << std::endl;
+      std::cerr << "Option " << *i << " is not set." << std::endl;
       return 1;
     } else if ((*i) == "-i") {
       if (inputFilename != "") {
-        std::cout << "Multiply input files." << std::endl;
+        std::cerr << "To many input files." << std::endl;
         return 1;
       }
       inputFilename = *++i;
     } else if ((*i) == "-o") {
       if (outputFilename != "") {
-        std::cout << "Multiply output files." << std::endl;
+        std::cerr << "To many output files." << std::endl;
         return 1;
       }
       outputFilename = *++i;
     } else {
-      std::cout << "Unknown option: " << *i << std::endl;
+      std::cerr << "Unknown option: " << *i << std::endl;
       return 1;
     }
   }
 
   // Проверка наличия параметров
   if (workflowInput == "") {
-    std::cout << "No workflow input file." << std::endl;
+    std::cerr << "No workflow input file." << std::endl;
     return 1;
   }
 
   std::ifstream file(workflowInput);
   if (!file.is_open()) {
-    std::cout << "Cannot open file: \"" << workflowInput << "\"" << std::endl;
+    std::cerr << "Cannot open file: \"" << workflowInput << "\"" << std::endl;
     return 1;
   }
 
@@ -65,9 +65,9 @@ int main(int argc, const char* argv[]) {
     wkfw::Workflow workflow(file, inputFilename, outputFilename);
     workflow.execute();
   } catch (const wkfw::InvalidWorkflowException& e) {
-    std::cout << "InvalidWorkflowException: " << e.what() << std::endl;
+    std::cerr << "InvalidWorkflowException: " << e.what() << std::endl;
   } catch (const wkfw::WorkerExecuteException& e) {
-    std::cout << "WorkerExecuteException: " << e.what() << std::endl;
+    std::cerr << "WorkerExecuteException: " << e.what() << std::endl;
   }
 
   file.close();
